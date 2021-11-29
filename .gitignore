@@ -2,7 +2,11 @@
 /.idea/
 /cmake-build-debug/
 /localtest/InnerData/
-/CMakeCache.txt/
-/cmake_install.cmake/
-/test.in/
-/tutorials/
+
+CMakeCache.txt
+cmake_install.cmake
+test.in
+tutorials
+code
+Makefile
+Apple-Pie-Interpreter
