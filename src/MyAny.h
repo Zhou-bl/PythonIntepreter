@@ -264,7 +264,39 @@ public:
         lhs << "None";
         return lhs;
     }
-
+//关系运算符
+    bool operator!() const{return !ToBool();}
+    friend bool operator ||(const MyAny& lhs, const MyAny& rhs){return lhs.ToBool() || rhs.ToBool();}
+    friend bool operator &&(const MyAny& lhs, const MyAny& rhs){return lhs.ToBool() && rhs.ToBool();}
+    friend bool operator ==(const MyAny& lhs, const MyAny& rhs){
+        if(lhs.ty == MyInt && rhs.ty == MyInt) return lhs.int_data == rhs.int_data;
+        if(lhs.ty == MyFloat && rhs.ty == MyFloat) return lhs.float_data == rhs.float_data;
+        if(lhs.ty == MyBool && rhs.ty == MyBool) return lhs.bool_data == rhs.bool_data;
+        if(lhs.ty == MyStr && rhs.ty == MyStr) return lhs.str_data == rhs.str_data;
+        //double and bool, int
+        if(lhs.ty == MyFloat) return lhs.float_data == rhs.ToFloat();
+        if(rhs.ty == MyFloat) return rhs.float_data == lhs.ToFloat();
+        //int and bool
+        if(lhs.ty == MyInt) return lhs.int_data == rhs.ToInt();
+        if(rhs.ty == MyInt) return rhs.int_data == lhs.ToInt();
+    }
+    friend bool operator !=(const MyAny& lhs, const MyAny& rhs){return !(lhs == rhs);}
+    friend bool operator <(const MyAny& lhs, const MyAny& rhs){
+        //同类型
+        if(lhs.ty == MyInt && rhs.ty == MyInt) return lhs.int_data < rhs.int_data;
+        if(lhs.ty == MyFloat && rhs.ty == MyFloat) return lhs.float_data < rhs.float_data;
+        if(lhs.ty == MyBool && rhs.ty == MyBool) return lhs.bool_data < rhs.bool_data;
+        if(lhs.ty == MyStr && rhs.ty == MyStr) return lhs.str_data < rhs.str_data;
+        //double and bool, int
+        if(lhs.ty == MyFloat) return lhs.float_data < rhs.ToFloat();
+        if(rhs.ty == MyFloat) return lhs.ToFloat() < rhs.float_data;
+        //int and bool
+        if(lhs.ty == MyInt) return lhs.int_data < rhs.ToInt();
+        if(rhs.ty == MyInt) return lhs.ToInt() < rhs.int_data;
+    }
+    friend bool operator >(const MyAny& lhs, const MyAny& rhs){return rhs < lhs;}
+    friend bool operator <=(const MyAny& lhs, const MyAny& rhs){return !(lhs > rhs);}
+    friend bool operator >=(const MyAny& lhs, const MyAny& rhs){return !(lhs < rhs);}
 };
 
 #endif //EVALVISITOR_H_MYANY_H

@@ -16,6 +16,11 @@ class EvalVisitor: public Python3BaseVisitor {
 //todo:override all methods of Python3BaseVisitor
 public:
 
+    static MyAny &GetValue(antlrcpp::Any tmp){
+        if(tmp.is<std::string>()) return VarScope.VarTable[tmp.as<std::string>()];
+        else return tmp.as<MyAny>();
+    }
+
     virtual antlrcpp::Any visitFile_input(Python3Parser::File_inputContext *ctx) override {
         return visitChildren(ctx);
     }
@@ -105,19 +110,53 @@ public:
     }
 
     virtual antlrcpp::Any visitOr_test(Python3Parser::Or_testContext *ctx) override {
-        return visitChildren(ctx);
+        auto And_Array = ctx->and_test();
+        if(And_Array.size() == 1) return visitAnd_test(And_Array[0]);
+        bool tmp = 0;
+        for(auto it : And_Array){
+            tmp = tmp || GetValue(visitAnd_test(it));
+            if(tmp) return MyAny(tmp);//短路
+        }
+        return MyAny(tmp);
     }
 
     virtual antlrcpp::Any visitAnd_test(Python3Parser::And_testContext *ctx) override {
-        return visitChildren(ctx);
+        auto Not_Array = ctx->not_test();
+        if(Not_Array.size() == 1) return visitNot_test(Not_Array[0]);
+        bool tmp = 1;
+        for(auto it : Not_Array){
+            tmp = tmp && GetValue(visitNot_test(it));
+            if(!tmp) return MyAny(tmp);//短路
+        }
+        return MyAny(tmp);
     }
 
     virtual antlrcpp::Any visitNot_test(Python3Parser::Not_testContext *ctx) override {
-        return visitChildren(ctx);
+        if(ctx->comparison()) return visitComparison(ctx->comparison());
+        return !GetValue(visitNot_test(ctx->not_test()));
     }
 
-    virtual antlrcpp::Any visitComparison(Python3Parser::ComparisonContext *ctx) override {
-        return visitChildren(ctx);
+    virtual antlrcpp::Any visitComparison(Python3Parser::ComparisonContext *ctx) override {//(四则表达式在前)
+        auto Arith_Array = ctx->arith_expr();
+        //无 关系运算符，只有四则运算：
+        if(Arith_Array.size() == 1) return visitArith_expr(Arith_Array[0]);
+        auto Op_Array = ctx->comp_op();
+        int Num = Op_Array.size();//获取操作数，速度快
+        MyAny a = GetValue(visitArith_expr(Arith_Array[0])), b;
+        std::string tmpOp;
+        for(int i = 1; i <= Num; ++i){//i-1 操作数, i 四则运算表达式
+            b = GetValue(visitArith_expr(Arith_Array[i]));
+            tmpOp = Op_Array[i - 1]->getText();
+            //短路
+            if(tmpOp == "==" && a != b) return MyAny(false);
+            if(tmpOp == "!=" && a == b) return MyAny(false);
+            if(tmpOp == ">" && a <= b) return MyAny(false);
+            if(tmpOp == "<" && a >= b) return MyAny(false);
+            if(tmpOp == ">=" && a < b) return MyAny(false);
+            if(tmpOp == "<=" && a > b) return MyAny(false);
+            a = b;
+        }
+        return MyAny(true);
     }
 
     virtual antlrcpp::Any visitComp_op(Python3Parser::Comp_opContext *ctx) override {
