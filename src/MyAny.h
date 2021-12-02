@@ -217,6 +217,7 @@ public:
         MyAny ans;
         ans.ty = MyInt;
         ans.int_data = lhs.int_data % rhs.int_data;
+        return ans;
     }
 
     MyAny &operator += (const MyAny& rhs){
@@ -229,7 +230,7 @@ public:
         return *this = *this * rhs;
     }
     MyAny &operator %= (const MyAny& rhs){
-        return *this = *this * rhs;
+        return *this = *this % rhs;
     }
     friend MyAny FloatDiv(const MyAny& lhs, const MyAny& rhs){
         MyAny ans;
@@ -240,7 +241,7 @@ public:
     friend MyAny IntDiv(const MyAny& lhs, const MyAny& rhs){
         MyAny ans;
         ans.ty = MyInt;
-        ans.int_data = lhs.int_data / rhs.int_data;
+        ans.int_data = lhs.ToInt() / rhs.ToInt();
         return ans;
     }
 

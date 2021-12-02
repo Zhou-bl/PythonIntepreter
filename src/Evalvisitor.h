@@ -192,7 +192,7 @@ public:
             if(tmpOp == "*") ret *= visitFactor(factorArray[i]);
             if(tmpOp == "//") ret = IntDiv(ret, visitFactor(factorArray[i]));
             if(tmpOp == "/") ret = FloatDiv(ret, visitFactor(factorArray[i]));
-            if(tmpOp == "%") ret %= visitFactor(visitFactor(factorArray[i]));
+            if(tmpOp == "%") ret %= visitFactor(factorArray[i]);
         }
         return ret;
     }
