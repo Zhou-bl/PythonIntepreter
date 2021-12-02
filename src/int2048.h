@@ -308,6 +308,9 @@ public:
         int2048 ans(0), a(*this),b(divisor),product(0),multiple(0);
         if((flag && divisor.flag) || (!flag && !divisor.flag)) ans.flag = 1;
         else ans.flag = 0;
+
+        //std::cout << "ans.flag:" << ans.flag << std::endl;
+
         if(!ans.flag){
             a += (!a.flag) ? int2048(0) - Abs(b) + int2048(1) : Abs(b) - int2048(1);
         }
@@ -319,7 +322,7 @@ public:
         a.flag = 1;b.flag = 1;
         int maxsize = a.len - b.len + 1;
         int ll ,rr ,mid ,cur;
-        if(a < b) return *this = (flag ^ divisor.flag) ? int2048(0) : int2048(-1);
+        if(a < b) return *this = ans.flag ? int2048(0) : int2048(-1);
         while(a >= b){
             multiple = int2048(0);
             multiple.a.resize(max_len + 1,0);
