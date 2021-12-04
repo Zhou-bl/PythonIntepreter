@@ -57,6 +57,10 @@ complex
 /mnt/d/周秉霖/Python-Assignment-2021-master/Python-Assignment-2021-master/src/main.cpp
 iostream
 -
+cstdlib
+-
+cstdio
+-
 antlr4-runtime.h
 /mnt/d/周秉霖/Python-Assignment-2021-master/Python-Assignment-2021-master/src/antlr4-runtime.h
 Python3Lexer.h

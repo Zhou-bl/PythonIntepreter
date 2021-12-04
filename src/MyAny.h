@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-enum Types {MyBool, MyInt, MyFloat, MyStr, MyNone};
+enum Types {MyBool, MyInt, MyFloat, MyStr, MyReturn, MyBreak, MyContinue, MyNone};
 
 class MyAny{
 public:
@@ -21,10 +21,12 @@ public:
     Types ty = MyNone;
     //构造函数
     MyAny(){}
+    MyAny(Types a) : ty(a) {}
     MyAny(const std::string& str){ty = MyStr; str_data = str;}
     MyAny(const bool& a){ty = MyBool; bool_data = a;}
     MyAny(const int2048& a){ty = MyInt; int_data = a;}
     MyAny(const double& a){ty = MyFloat; float_data = a;}
+
 
     int2048 FloatToInt(const double& a) const{
         double b = a;

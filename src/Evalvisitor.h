@@ -42,7 +42,8 @@ public:
     }
 
     virtual antlrcpp::Any visitStmt(Python3Parser::StmtContext *ctx) override {
-        return visitChildren(ctx);
+        if (ctx->simple_stmt()) return visitSimple_stmt(ctx->simple_stmt());
+        return visitCompound_stmt(ctx->compound_stmt());
     }
 
     virtual antlrcpp::Any visitSimple_stmt(Python3Parser::Simple_stmtContext *ctx) override {
@@ -50,7 +51,10 @@ public:
     }
 
     virtual antlrcpp::Any visitSmall_stmt(Python3Parser::Small_stmtContext *ctx) override {
-        return visitChildren(ctx);
+        if (ctx->expr_stmt()) {
+            return visitExpr_stmt(ctx->expr_stmt());
+        }
+        return visitFlow_stmt(ctx->flow_stmt());
     }
 
 
@@ -64,6 +68,17 @@ public:
         std::string varName = testlistArray[0]->getText();
         MyAny varData = visitTestlist(testlistArray[1]);
 
+        if(ctx->augassign()){
+            std::string tmpOp = ctx->augassign()->getText();
+            if(tmpOp == "+=") VarScope.VarTable[varName] += varData;
+            if(tmpOp == "-=") VarScope.VarTable[varName] -= varData;
+            if(tmpOp == "*=") VarScope.VarTable[varName] *= varData;
+            if(tmpOp == "%=") VarScope.VarTable[varName] %= varData;
+            if(tmpOp == "//=") VarScope.VarTable[varName] = IntDiv(GetValue(varName),varData);
+            if(tmpOp == "/=") VarScope.VarTable[varName] = FloatDiv(GetValue(varName), varData);
+            return MyAny();
+        }
+
         VarScope.VarRegister(varName, varData);
         return MyAny();
     }
@@ -74,7 +89,9 @@ public:
     }
 
     virtual antlrcpp::Any visitFlow_stmt(Python3Parser::Flow_stmtContext *ctx) override {
-        return visitChildren(ctx);
+        if(ctx->return_stmt()) return visitReturn_stmt(ctx->return_stmt());
+        if(ctx->break_stmt()) return MyAny(MyBreak);
+        return MyAny(MyContinue);
     }
 
     virtual antlrcpp::Any visitBreak_stmt(Python3Parser::Break_stmtContext *ctx) override {
@@ -94,15 +111,48 @@ public:
     }
 
     virtual antlrcpp::Any visitIf_stmt(Python3Parser::If_stmtContext *ctx) override {
-        return visitChildren(ctx);
+        auto tests = ctx->test();
+        int testNum = tests.size();
+        auto suites = ctx->suite();
+        for (int i = 0; i < testNum; ++i) {
+            if (visitTest(tests[i]).as<MyAny>().ToBool()) {
+                return visitSuite(suites[i]);
+            }
+        }
+        if (ctx->ELSE()) {
+            return visitSuite(suites.back());
+        }
+        return 0;
     }
 
     virtual antlrcpp::Any visitWhile_stmt(Python3Parser::While_stmtContext *ctx) override {
-        return visitChildren(ctx);
+        auto test_array = ctx->test();
+        auto suite_array = ctx->suite();
+
+        while(visitTest(test_array).as<MyAny>().ToBool()){
+            auto result = visitSuite(suite_array);
+            if(result.is<MyAny>()){
+                MyAny tmp = result;
+                if(tmp.ty == MyBreak) break;
+                if(tmp.ty == MyContinue) continue;
+            }
+        }
+        return MyAny();
     }
 
     virtual antlrcpp::Any visitSuite(Python3Parser::SuiteContext *ctx) override {
-        return visitChildren(ctx);
+        if (ctx->simple_stmt()) {
+            return visitSimple_stmt(ctx->simple_stmt());
+        }
+        auto stmts = ctx->stmt();
+        for (auto i : stmts) {
+            auto result = visitStmt(i);
+            if (result.is<MyAny>()) return result;
+            if (result.is<std::vector<MyAny>>()) {
+                return result;
+            }
+        }
+        return MyAny();
     }
 
     virtual antlrcpp::Any visitTest(Python3Parser::TestContext *ctx) override {
@@ -208,13 +258,13 @@ public:
     }
 
     virtual antlrcpp::Any visitAtom_expr(Python3Parser::Atom_exprContext *ctx) override {
-       if(!ctx->trailer()) return visitAtom(ctx->atom());//下级会return 可能为string， MyAny...
-       auto functionName = ctx->atom()->getText();
-       auto argsArray = visitTrailer(ctx->trailer()).as<std::vector<MyAny>>();
-       if(functionName == "print"){
-           std:: cout << argsArray[0] << std::endl;
-           return MyAny();
-       }
+        if(!ctx->trailer()) return visitAtom(ctx->atom());//下级会return 可能为string， MyAny...
+        auto functionName = ctx->atom()->getText();
+        auto argsArray = visitTrailer(ctx->trailer()).as<std::vector<MyAny>>();
+        if(functionName == "print"){
+            std:: cout << argsArray[0] << std::endl;
+            return MyAny();
+        }
     }
 
     virtual antlrcpp::Any visitTrailer(Python3Parser::TrailerContext *ctx) override {
