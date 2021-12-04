@@ -9,15 +9,17 @@
 #include "MyAny.h"
 
 static Scope VarScope;
-static MyAny return_value;
-enum StmtRes { kNormal, kBreak, kContinue, kReturn };
+static Function FunScope;
+
 class EvalVisitor: public Python3BaseVisitor {
 
 //todo:override all methods of Python3BaseVisitor
 public:
 
     static MyAny &GetValue(antlrcpp::Any tmp){
-        if(tmp.is<std::string>()) return VarScope.VarTable[tmp.as<std::string>()];
+        if(tmp.is<std::string>()){
+            return VarScope[tmp.as<std::string>()];
+        }
         else return tmp.as<MyAny>();
     }
 
@@ -26,15 +28,28 @@ public:
     }
 
     virtual antlrcpp::Any visitFuncdef(Python3Parser::FuncdefContext *ctx) override {
-        return visitChildren(ctx);
+        std::string Name = ctx->NAME()->getText();
+        FunScope.suite[Name] = ctx->suite();
+        FunScope.para[Name] = visitParameters(ctx->parameters()).as<ParametersType>();
+        return 0;
     }
 
     virtual antlrcpp::Any visitParameters(Python3Parser::ParametersContext *ctx) override {
-        return visitChildren(ctx);
+        if (!ctx->typedargslist()) return ParametersType();
+        return visitTypedargslist(ctx->typedargslist());
     }
 
     virtual antlrcpp::Any visitTypedargslist(Python3Parser::TypedargslistContext *ctx) override {
-        return visitChildren(ctx);
+        auto tmpname_array = ctx->tfpdef();
+        auto test_array = ctx->test();
+        ParametersType ans;
+        int dlt = test_array.size() - tmpname_array.size();
+        for (int i = 0; i < tmpname_array.size(); ++i) {
+            MyAny return_val;
+            if (i + dlt >= 0) return_val = GetValue(visitTest(test_array[i + dlt]));
+            ans.push_back(make_pair(tmpname_array[i]->NAME()->getText(), return_val));
+        }
+        return ans;
     }
 
     virtual antlrcpp::Any visitTfpdef(Python3Parser::TfpdefContext *ctx) override {
@@ -70,12 +85,12 @@ public:
 
         if(ctx->augassign()){
             std::string tmpOp = ctx->augassign()->getText();
-            if(tmpOp == "+=") VarScope.VarTable[varName] += varData;
-            if(tmpOp == "-=") VarScope.VarTable[varName] -= varData;
-            if(tmpOp == "*=") VarScope.VarTable[varName] *= varData;
-            if(tmpOp == "%=") VarScope.VarTable[varName] %= varData;
-            if(tmpOp == "//=") VarScope.VarTable[varName] = IntDiv(GetValue(varName),varData);
-            if(tmpOp == "/=") VarScope.VarTable[varName] = FloatDiv(GetValue(varName), varData);
+            if(tmpOp == "+=") VarScope.VarTable[VarScope.dep][varName] += varData;
+            if(tmpOp == "-=") VarScope.VarTable[VarScope.dep][varName] -= varData;
+            if(tmpOp == "*=") VarScope.VarTable[VarScope.dep][varName] *= varData;
+            if(tmpOp == "%=") VarScope.VarTable[VarScope.dep][varName] %= varData;
+            if(tmpOp == "//=") VarScope.VarTable[VarScope.dep][varName] = IntDiv(GetValue(varName),varData);
+            if(tmpOp == "/=") VarScope.VarTable[VarScope.dep][varName] = FloatDiv(GetValue(varName), varData);
             return MyAny();
         }
 
@@ -263,6 +278,21 @@ public:
         auto argsArray = visitTrailer(ctx->trailer()).as<std::vector<MyAny>>();
         if(functionName == "print"){
             std:: cout << argsArray[0] << std::endl;
+            return MyAny();
+        }
+        else{//其他函数  需要为形参新开一层空间
+            VarScope.AddLevel();//new level
+            auto para_array = FunScope.Parameters(functionName);
+            int len = para_array.size();
+            std::string tmpname;
+            MyAny tmpdata;
+            for(int i = 0; i < len; ++i){
+                tmpname = para_array[i].first;//变量名
+                tmpdata = para_array[i].second;
+                VarScope.VarRegister(tmpname, tmpdata);
+            }
+            visitSuite(FunScope.Suite(functionName));
+            VarScope.DelLevel();
             return MyAny();
         }
     }
